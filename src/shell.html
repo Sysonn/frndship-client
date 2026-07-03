@@ -20,6 +20,14 @@
     </div>
   </div>
 
+  <!-- Non-blocking update-ready banner (Sprint 3). Hidden by default; shown
+       via titlebar.js when main.js signals an update has finished
+       downloading. Never auto-restarts &mdash; user must click the button. -->
+  <div id="update-banner" class="no-drag" hidden>
+    <span>Update ready &mdash; restart to apply</span>
+    <button id="btn-update-restart" class="no-drag" type="button">Restart</button>
+  </div>
+
   <!-- The actual frndship.app content lives in this <webview>, below the
        titlebar. main.js enforces the preload/partition for this webview via
        'will-attach-webview' rather than trusting these markup attributes,

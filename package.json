@@ -38,6 +38,14 @@
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Sysonn",
+      "repo": "frndship-client"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }

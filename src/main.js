@@ -4,8 +4,42 @@
 // branching (macOS/Linux) can be added later without restructuring this file.
 
 const { app, BrowserWindow, session, shell, ipcMain, Menu } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const url = require('url');
+
+// Silent by design: failed/unavailable update checks must never interrupt
+// current app usage (see autoUpdater 'error' handler below). Downloads happen
+// automatically once an update is found; the user is only ever prompted to
+// restart, never to start the download.
+autoUpdater.autoDownload = true;
+
+function initAutoUpdate() {
+  autoUpdater.checkForUpdates().catch((err) => {
+    console.error('Auto-update check failed:', err);
+  });
+
+  autoUpdater.on('update-available', (_info) => {
+    // No renderer notification needed yet for this state — the user only
+    // needs to know once the update has actually finished downloading (see
+    // 'update-downloaded' below), not that a check found one.
+  });
+
+  autoUpdater.on('update-downloaded', (_info) => {
+    if (mainWindow) {
+      mainWindow.webContents.send('update-ready');
+    }
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('Auto-update error:', err);
+    // Fail silently — do not block or interrupt app usage.
+  });
+}
+
+ipcMain.on('restart-and-install', () => {
+  autoUpdater.quitAndInstall();
+});
 
 // No default File/Edit/View/Window/Help menu bar. Note: this also removes the
 // default accelerators that ship with that menu (e.g. Ctrl+R) — those are
@@ -247,6 +281,7 @@ if (!gotSingleInstanceLock) {
   app.whenReady().then(() => {
     setupPermissionHandler();
     createWindow();
+    initAutoUpdate();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {

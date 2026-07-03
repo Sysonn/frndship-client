@@ -38,3 +38,17 @@ window.windowControls.onNavState(({ canGoBack, canGoForward }) => {
 // Buttons start disabled until the first nav-state update arrives.
 btnBack.disabled = true;
 btnForward.disabled = true;
+
+// Update-ready banner: shown once main.js confirms a downloaded update is
+// waiting. Purely informational until the user clicks Restart — never
+// auto-restarts on its own.
+const updateBanner = document.getElementById('update-banner');
+const btnUpdateRestart = document.getElementById('btn-update-restart');
+
+window.updater.onUpdateReady(() => {
+  updateBanner.hidden = false;
+});
+
+btnUpdateRestart.addEventListener('click', () => {
+  window.updater.restartAndInstall();
+});

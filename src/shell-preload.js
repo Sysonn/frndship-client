@@ -21,3 +21,10 @@ contextBridge.exposeInMainWorld('windowControls', {
     ipcRenderer.on('nav-state', (_event, state) => callback(state));
   },
 });
+
+contextBridge.exposeInMainWorld('updater', {
+  onUpdateReady: (callback) => {
+    ipcRenderer.on('update-ready', () => callback());
+  },
+  restartAndInstall: () => ipcRenderer.send('restart-and-install'),
+});

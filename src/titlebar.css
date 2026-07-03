@@ -108,3 +108,42 @@ button {
   width: 100%;
   height: calc(100% - var(--titlebar-height));
 }
+
+/* Update-ready toast: small, non-blocking, top-right corner below the
+   titlebar. Never covers the content area's interactive controls. */
+#update-banner {
+  position: fixed;
+  top: calc(var(--titlebar-height) + 10px);
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--cream);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+#update-banner[hidden] {
+  display: none;
+}
+
+#update-banner button {
+  width: auto;
+  height: auto;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--cobalt);
+  color: var(--cream);
+}
+
+#update-banner button:hover {
+  background: var(--safety-orange);
+  color: var(--ink);
+}
