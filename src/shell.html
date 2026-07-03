@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Frndship</title>
+  <link rel="stylesheet" href="titlebar.css" />
+</head>
+<body>
+  <div id="titlebar">
+    <div id="nav-controls">
+      <button id="btn-back" class="no-drag" title="Back">&#8249;</button>
+      <button id="btn-forward" class="no-drag" title="Forward">&#8250;</button>
+      <button id="btn-refresh" class="no-drag" title="Refresh">&#10227;</button>
+    </div>
+    <div id="drag-region">Frndship</div>
+    <div id="window-controls">
+      <button id="btn-min" class="no-drag" title="Minimize">&#8212;</button>
+      <button id="btn-max" class="no-drag" title="Maximize">&#9634;</button>
+      <button id="btn-close" class="no-drag" title="Close">&#10005;</button>
+    </div>
+  </div>
+
+  <!-- The actual frndship.app content lives in this <webview>, below the
+       titlebar. main.js enforces the preload/partition for this webview via
+       'will-attach-webview' rather than trusting these markup attributes,
+       but src/preload.js is also the file used either way. -->
+  <webview
+    id="content"
+    src="https://frndship.app/login"
+    partition="persist:frndship"
+    preload="preload.js"
+    webpreferences="contextIsolation=yes, nodeIntegration=no"
+  ></webview>
+
+  <script src="titlebar.js"></script>
+</body>
+</html>

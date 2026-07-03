@@ -1,0 +1,7 @@
+node_modules/
+# build/ holds source assets (icon.ico) for electron-builder — not ignored.
+# Packaged output goes to dist/ instead.
+dist/
+*.log
+.env
+.DS_Store

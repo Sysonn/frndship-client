@@ -1,0 +1,73 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #0f1115;
+  color: #f2f3f5;
+}
+
+.offline-card {
+  text-align: center;
+  max-width: 360px;
+  padding: 40px 32px;
+  border-radius: 12px;
+  background: #171a21;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.logo {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6c8cff;
+  margin-bottom: 24px;
+}
+
+h1 {
+  font-size: 22px;
+  margin: 0 0 12px;
+}
+
+p {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #b3b7c2;
+  margin: 0 0 24px;
+}
+
+button {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  background: #6c8cff;
+  color: #0f1115;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #839bff;
+}
+
+.status {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: #6c8cff;
+  min-height: 14px;
+}

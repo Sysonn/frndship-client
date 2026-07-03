@@ -1,0 +1,110 @@
+/* Frndship shell titlebar — Cassette Futurism palette:
+   cream base, electric cobalt accent, safety orange, grello highlight. */
+
+:root {
+  --cream: #f5f0e6;
+  --ink: #17171c;
+  --cobalt: #3165ef;
+  --safety-orange: #ff6a13;
+  --grello: #c4d600;
+  --titlebar-bg: #0a0a0f;
+  --titlebar-height: 32px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--ink);
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+#titlebar {
+  -webkit-app-region: drag;
+  height: var(--titlebar-height);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--titlebar-bg);
+  border-bottom: 1px solid rgba(245, 240, 230, 0.08);
+  user-select: none;
+}
+
+.no-drag,
+button {
+  -webkit-app-region: no-drag;
+}
+
+#nav-controls,
+#window-controls {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+#drag-region {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding-left: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cream);
+  opacity: 0.6;
+}
+
+#titlebar button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--cream);
+  width: 40px;
+  height: var(--titlebar-height);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#nav-controls button {
+  width: 32px;
+  font-size: 16px;
+  color: rgba(245, 240, 230, 0.75);
+}
+
+#nav-controls button:disabled {
+  color: rgba(245, 240, 230, 0.25);
+  cursor: default;
+}
+
+#nav-controls button:not(:disabled):hover,
+#btn-refresh:hover {
+  background: rgba(49, 101, 239, 0.25); /* electric cobalt wash */
+  color: var(--cream);
+}
+
+#window-controls button:hover {
+  background: rgba(196, 214, 0, 0.18); /* grello wash */
+}
+
+#btn-close:hover {
+  background: var(--safety-orange);
+  color: var(--ink);
+}
+
+#content {
+  display: inline-flex;
+  width: 100%;
+  height: calc(100% - var(--titlebar-height));
+}
