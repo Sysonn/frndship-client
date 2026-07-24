@@ -3,7 +3,7 @@
 // Windows-first this sprint, but nothing here is Windows-specific — platform
 // branching (macOS/Linux) can be added later without restructuring this file.
 
-const { app, BrowserWindow, session, shell, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, session, shell, ipcMain, Menu, desktopCapturer } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const url = require('url');
@@ -13,6 +13,8 @@ const url = require('url');
 // automatically once an update is found; the user is only ever prompted to
 // restart, never to start the download.
 autoUpdater.autoDownload = true;
+
+
 
 function initAutoUpdate() {
   autoUpdater.checkForUpdates().catch((err) => {
@@ -332,3 +334,20 @@ ipcMain.on('nav-forward', () => {
 ipcMain.on('nav-refresh', () => {
   if (contentWebContents) contentWebContents.reload();
 });
+
+ipcMain.handle('get-desktop-sources', async () => {
+  // Get all available screens and windows
+  const sources = await desktopCapturer.getSources({ 
+    types: ['window', 'screen'],
+    thumbnailSize: { width: 300, height: 300 }
+  });
+  
+  // Format them for our React Modal
+  return sources.map(source => ({
+    id: source.id,
+    name: source.name,
+    // Convert the native image thumbnail to a base64 string React can render
+    thumbnail: source.thumbnail.toDataURL() 
+  }));
+});
+

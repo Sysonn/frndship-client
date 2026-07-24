@@ -10,6 +10,10 @@ contextBridge.exposeInMainWorld('frndship', {
   retryConnection: () => ipcRenderer.send('retry-connection'),
 });
 
+contextBridge.exposeInMainWorld('electron', {
+  getDesktopSources: () => ipcRenderer.invoke('get-desktop-sources')
+});
+
 // Automatic recovery: as soon as the OS/browser reports connectivity is back,
 // ask main to retry loading the live site instead of requiring the user to
 // click Retry. This fires in whichever page (offline.html or the live site)
