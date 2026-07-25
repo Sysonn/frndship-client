@@ -1,6 +1,6 @@
 {
   "name": "frndship-electron",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Frndship Electron desktop shell",
   "main": "src/main.js",
   "scripts": {
@@ -46,6 +46,7 @@
     }
   },
   "dependencies": {
-    "electron-updater": "^6.8.9"
+    "electron-updater": "^6.8.9",
+    "loopback-capture": "^2.0.0"
   }
 }

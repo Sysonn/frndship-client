@@ -14,6 +14,29 @@ contextBridge.exposeInMainWorld('electron', {
   getDesktopSources: () => ipcRenderer.invoke('get-desktop-sources')
 });
 
+contextBridge.exposeInMainWorld('frndshipNativeAudio', {
+  // Controls to start and stop the WASAPI hook
+  startCapture: (sourceId) => ipcRenderer.send('start-app-audio', sourceId),
+  stopCapture: () => ipcRenderer.send('stop-app-audio'),
+  
+  // Listener for incoming PCM ArrayBuffers
+  onAudioChunk: (callback) => {
+    const subscription = (_event, chunkData) => {
+      // Electron IPC sends Node Buffers as Uint8Array. Extract the exact
+      // ArrayBuffer slice so React doesn't get a huge 8KB node slab.
+      const preciseArrayBuffer = chunkData.buffer.slice(
+        chunkData.byteOffset, 
+        chunkData.byteOffset + chunkData.byteLength
+      );
+      callback(preciseArrayBuffer);
+    };
+    ipcRenderer.on('app-audio-chunk', subscription);
+    
+    // Return an unsubscribe function to prevent memory leaks in React
+    return () => ipcRenderer.removeListener('app-audio-chunk', subscription);
+  }
+});
+
 // Automatic recovery: as soon as the OS/browser reports connectivity is back,
 // ask main to retry loading the live site instead of requiring the user to
 // click Retry. This fires in whichever page (offline.html or the live site)

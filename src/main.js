@@ -7,6 +7,10 @@ const { app, BrowserWindow, session, shell, ipcMain, Menu, desktopCapturer } = r
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const url = require('url');
+const loopback = require('loopback-capture');
+
+// Global tracking variable for the active audio loopback instance
+let activeAudioCapture = null;
 
 // Silent by design: failed/unavailable update checks must never interrupt
 // current app usage (see autoUpdater 'error' handler below). Downloads happen
@@ -297,6 +301,12 @@ if (!gotSingleInstanceLock) {
       app.quit();
     }
   });
+
+  app.on('will-quit', () => {
+    if (activeAudioCapture) {
+      try { activeAudioCapture.stop(); } catch(e) {}
+    }
+  });
 }
 
 // Renderer (offline.html, via preload) asks main to retry loading the live
@@ -333,6 +343,76 @@ ipcMain.on('nav-forward', () => {
 });
 ipcMain.on('nav-refresh', () => {
   if (contentWebContents) contentWebContents.reload();
+});
+
+ipcMain.on('start-app-audio', (event, targetWindowId) => {
+  // 1. Clean up any existing capture session
+  if (activeAudioCapture) {
+    try { activeAudioCapture.stop(); } catch(e) {}
+    activeAudioCapture = null;
+  }
+
+  // 2. Parse the native HWND from Chromium's desktopCapturer format ("window:HWND:0")
+  const idParts = targetWindowId.split(':');
+  if (idParts[0] !== 'window' || !idParts[1]) {
+    console.error('Invalid source ID format for application audio isolation.');
+    return;
+  }
+  const hwnd = parseInt(idParts[1], 10);
+
+  // 3. Securely convert HWND to Process ID (PID) using PowerShell
+  const psScript = `
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32 {
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+}
+"@
+$pidOut = 0
+[Win32]::GetWindowThreadProcessId([IntPtr]${hwnd}, [ref]$pidOut) | Out-Null
+Write-Output $pidOut
+  `;
+  
+  // Base64 encode for UTF-16LE as required by powershell -EncodedCommand
+  const encoded = Buffer.from(psScript, 'utf16le').toString('base64');
+
+  require('child_process').exec(`powershell -NoProfile -EncodedCommand ${encoded}`, (err, stdout) => {
+    if (err) {
+      console.error('Failed to resolve PID from HWND:', err);
+      return;
+    }
+    
+    const pid = parseInt(stdout.trim(), 10);
+    if (!pid || pid === 0) {
+      console.error('Resolved invalid PID from HWND.');
+      return;
+    }
+
+    console.log(`Initializing WASAPI application loopback for PID: ${pid} (from HWND ${hwnd})`);
+
+    try {
+      activeAudioCapture = new loopback.LoopbackCapture();
+      
+      // 4. Start capture and pipe the raw PCM Buffer chunks over IPC
+      activeAudioCapture.start(pid, true, (chunk) => {
+        if (contentWebContents && !contentWebContents.isDestroyed()) {
+          contentWebContents.send('app-audio-chunk', chunk);
+        }
+      });
+    } catch (captureErr) {
+      console.error('Failed to initialize WASAPI loopback engine:', captureErr);
+    }
+  });
+});
+
+ipcMain.on('stop-app-audio', () => {
+  if (activeAudioCapture) {
+    console.log('Stopping WASAPI application loopback engine.');
+    try { activeAudioCapture.stop(); } catch(e) {}
+    activeAudioCapture = null;
+  }
 });
 
 ipcMain.handle('get-desktop-sources', async () => {
