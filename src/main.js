@@ -195,7 +195,6 @@ function createWindow() {
 
   mainWindow.webContents.on('did-attach-webview', (_event, guestWebContents) => {
     contentWebContents = guestWebContents;
-    guestWebContents.openDevTools({ mode: 'detach' });
 
     // Placeholder for future CSP lockdown. For this sprint we rely on
     // navigation guardrails below rather than a full Content-Security-Policy
