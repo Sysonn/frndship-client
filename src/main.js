@@ -64,6 +64,9 @@ if (process.platform === 'win32') {
   app.setAppUserModelId(APP_USER_MODEL_ID);
 }
 
+// Ensure autoplay policy allows WebAudio worklets / voice isolation without gesture
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
 
 // Chromium net-error codes that indicate a genuine connectivity failure
 // (as opposed to e.g. a 404/500 from the site itself, which Chromium does NOT
@@ -130,6 +133,9 @@ function registerReloadShortcut(webContents) {
     if (input.control && input.key.toLowerCase() === 'r' && input.type === 'keyDown') {
       if (contentWebContents) contentWebContents.reload();
     }
+    if (((input.control && input.shift && input.key.toLowerCase() === 'i') || input.key === 'F12') && input.type === 'keyDown') {
+      if (contentWebContents) contentWebContents.toggleDevTools();
+    }
   });
 }
 
@@ -189,6 +195,7 @@ function createWindow() {
 
   mainWindow.webContents.on('did-attach-webview', (_event, guestWebContents) => {
     contentWebContents = guestWebContents;
+    guestWebContents.openDevTools({ mode: 'detach' });
 
     // Placeholder for future CSP lockdown. For this sprint we rely on
     // navigation guardrails below rather than a full Content-Security-Policy

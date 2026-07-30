@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <title>Frndship</title>
   <link rel="stylesheet" href="titlebar.css" />
 </head>
+
 <body>
   <div id="titlebar">
     <div id="nav-controls">
@@ -32,14 +34,14 @@
        titlebar. main.js enforces the preload/partition for this webview via
        'will-attach-webview' rather than trusting these markup attributes,
        but src/preload.js is also the file used either way. -->
-  <webview
-    id="content"
-    src="https://frndship.app/login"
-    partition="persist:frndship"
-    preload="preload.js"
-    webpreferences="contextIsolation=yes, nodeIntegration=no"
-  ></webview>
+
+  <webview id="content" src="https://frndship.app/login" partition="persist:frndship" preload="preload.js"
+    webpreferences="contextIsolation=yes, nodeIntegration=no"></webview>
+
+  <!-- <webview id="content" src="http://localhost:5173/login" partition="persist:frndship"
+    webpreferences="contextIsolation=yes, nodeIntegration=no"></webview> -->
 
   <script src="titlebar.js"></script>
 </body>
+
 </html>

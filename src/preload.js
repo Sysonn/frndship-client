@@ -5,13 +5,18 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
+console.log('[Electron Preload] 🚀 preload.js loaded in webview!');
+
+contextBridge.exposeInMainWorld('isElectronApp', true);
+
 contextBridge.exposeInMainWorld('frndship', {
   // Manual "Retry" button on the offline page calls this.
   retryConnection: () => ipcRenderer.send('retry-connection'),
 });
 
 contextBridge.exposeInMainWorld('electron', {
-  getDesktopSources: () => ipcRenderer.invoke('get-desktop-sources')
+  getDesktopSources: () => ipcRenderer.invoke('get-desktop-sources'),
+  isDesktopApp: true,
 });
 
 contextBridge.exposeInMainWorld('frndshipNativeAudio', {
