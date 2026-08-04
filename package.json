@@ -1,6 +1,6 @@
 {
   "name": "frndship-electron",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Frndship Electron desktop shell",
   "main": "src/main.js",
   "scripts": {

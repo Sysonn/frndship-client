@@ -14,21 +14,22 @@
       <button id="btn-forward" class="no-drag" title="Forward">&#8250;</button>
       <button id="btn-refresh" class="no-drag" title="Refresh">&#10227;</button>
     </div>
-    <div id="drag-region">Frndship</div>
+    <!-- <div id="drag-region">Frndship</div> -->
     <div id="window-controls">
+
+      <!-- Non-blocking update-ready banner (Sprint 3). Hidden by default; shown
+       via titlebar.js when main.js signals an update has finished
+       downloading. Never auto-restarts &mdash; user must click the button. -->
+      <div id="update-banner" class="no-drag" hidden>
+        <button id="btn-update-restart" class="no-drag" type="button">Update</button>
+      </div>
+
       <button id="btn-min" class="no-drag" title="Minimize">&#8212;</button>
       <button id="btn-max" class="no-drag" title="Maximize">&#9634;</button>
       <button id="btn-close" class="no-drag" title="Close">&#10005;</button>
     </div>
   </div>
 
-  <!-- Non-blocking update-ready banner (Sprint 3). Hidden by default; shown
-       via titlebar.js when main.js signals an update has finished
-       downloading. Never auto-restarts &mdash; user must click the button. -->
-  <div id="update-banner" class="no-drag" hidden>
-    <span>Update ready &mdash; restart to apply</span>
-    <button id="btn-update-restart" class="no-drag" type="button">Restart</button>
-  </div>
 
   <!-- The actual frndship.app content lives in this <webview>, below the
        titlebar. main.js enforces the preload/partition for this webview via
@@ -36,10 +37,10 @@
        but src/preload.js is also the file used either way. -->
 
   <webview id="content" src="https://frndship.app/login" partition="persist:frndship" preload="preload.js"
-    webpreferences="contextIsolation=yes, nodeIntegration=no"></webview>
+    webpreferences="contextIsolation=yes, nodeIntegration=no" allowpopups></webview>
 
   <!-- <webview id="content" src="http://localhost:5173/login" partition="persist:frndship"
-    webpreferences="contextIsolation=yes, nodeIntegration=no"></webview> -->
+    webpreferences="contextIsolation=yes, nodeIntegration=no" allowpopups></webview> -->
 
   <script src="titlebar.js"></script>
 </body>

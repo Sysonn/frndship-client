@@ -8,6 +8,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 console.log('[Electron Preload] 🚀 preload.js loaded in webview!');
 
 contextBridge.exposeInMainWorld('isElectronApp', true);
+contextBridge.exposeInMainWorld(
+  'isSecondaryWindow',
+  process.argv.includes('--is-secondary-window=true')
+);
 
 contextBridge.exposeInMainWorld('frndship', {
   // Manual "Retry" button on the offline page calls this.

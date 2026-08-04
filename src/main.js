@@ -98,7 +98,11 @@ let isShowingOfflinePage = false;
 function isFrndshipUrl(targetUrl) {
   try {
     const parsed = new URL(targetUrl);
-    return parsed.origin === APP_ORIGIN;
+    return (
+      parsed.origin === APP_ORIGIN ||
+      parsed.origin === 'http://localhost:5173' ||
+      parsed.origin === 'http://localhost:3000'
+    );
   } catch {
     return false;
   }
@@ -233,7 +237,32 @@ function createWindow() {
 
     contentWebContents.setWindowOpenHandler(({ url: targetUrl }) => {
       if (isFrndshipUrl(targetUrl)) {
-        return { action: 'allow' };
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 1400,
+            height: 900,
+            frame: false,
+            roundedCorners: true,
+            titleBarStyle: 'hidden',
+            titleBarOverlay: {
+              color: '#2a2a2a',
+              symbolColor: '#ffffff',
+              height: 32,
+            },
+            autoHideMenuBar: true,
+            backgroundColor: '#0a0a0f',
+            icon: path.join(__dirname, '..', 'build', 'icon.ico'),
+            webPreferences: {
+              preload: path.join(__dirname, 'preload.js'),
+              contextIsolation: true,
+              nodeIntegration: false,
+              sandbox: true,
+              partition: SESSION_PARTITION,
+              additionalArguments: ['--is-secondary-window=true'],
+            },
+          },
+        };
       }
       shell.openExternal(targetUrl);
       return { action: 'deny' };
@@ -310,7 +339,7 @@ if (!gotSingleInstanceLock) {
 
   app.on('will-quit', () => {
     if (activeAudioCapture) {
-      try { activeAudioCapture.stop(); } catch(e) {}
+      try { activeAudioCapture.stop(); } catch (e) { }
     }
   });
 }
@@ -354,7 +383,7 @@ ipcMain.on('nav-refresh', () => {
 ipcMain.on('start-app-audio', (event, targetWindowId) => {
   // 1. Clean up any existing capture session
   if (activeAudioCapture) {
-    try { activeAudioCapture.stop(); } catch(e) {}
+    try { activeAudioCapture.stop(); } catch (e) { }
     activeAudioCapture = null;
   }
 
@@ -380,7 +409,7 @@ $pidOut = 0
 [Win32]::GetWindowThreadProcessId([IntPtr]${hwnd}, [ref]$pidOut) | Out-Null
 Write-Output $pidOut
   `;
-  
+
   // Base64 encode for UTF-16LE as required by powershell -EncodedCommand
   const encoded = Buffer.from(psScript, 'utf16le').toString('base64');
 
@@ -389,7 +418,7 @@ Write-Output $pidOut
       console.error('Failed to resolve PID from HWND:', err);
       return;
     }
-    
+
     const pid = parseInt(stdout.trim(), 10);
     if (!pid || pid === 0) {
       console.error('Resolved invalid PID from HWND.');
@@ -400,7 +429,7 @@ Write-Output $pidOut
 
     try {
       activeAudioCapture = new loopback.LoopbackCapture();
-      
+
       // 4. Start capture and pipe the raw PCM Buffer chunks over IPC
       activeAudioCapture.start(pid, true, (chunk) => {
         if (contentWebContents && !contentWebContents.isDestroyed()) {
@@ -416,24 +445,24 @@ Write-Output $pidOut
 ipcMain.on('stop-app-audio', () => {
   if (activeAudioCapture) {
     console.log('Stopping WASAPI application loopback engine.');
-    try { activeAudioCapture.stop(); } catch(e) {}
+    try { activeAudioCapture.stop(); } catch (e) { }
     activeAudioCapture = null;
   }
 });
 
 ipcMain.handle('get-desktop-sources', async () => {
   // Get all available screens and windows
-  const sources = await desktopCapturer.getSources({ 
+  const sources = await desktopCapturer.getSources({
     types: ['window', 'screen'],
     thumbnailSize: { width: 300, height: 300 }
   });
-  
+
   // Format them for our React Modal
   return sources.map(source => ({
     id: source.id,
     name: source.name,
     // Convert the native image thumbnail to a base64 string React can render
-    thumbnail: source.thumbnail.toDataURL() 
+    thumbnail: source.thumbnail.toDataURL()
   }));
 });
 
