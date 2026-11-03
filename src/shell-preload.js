@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('windowControls', {
   onNavState: (callback) => {
     ipcRenderer.on('nav-state', (_event, state) => callback(state));
   },
+  onWindowFullscreen: (callback) => {
+    ipcRenderer.on('window-fullscreen', (_event, enabled) => callback(enabled));
+  },
 });
 
 contextBridge.exposeInMainWorld('updater', {

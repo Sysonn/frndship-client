@@ -14,10 +14,9 @@
       <button id="btn-forward" class="no-drag" title="Forward">&#8250;</button>
       <button id="btn-refresh" class="no-drag" title="Refresh">&#10227;</button>
     </div>
-    <!-- <div id="drag-region">Frndship</div> -->
     <div id="window-controls">
 
-      <!-- Non-blocking update-ready banner (Sprint 3). Hidden by default; shown
+      <!-- Non-blocking update-ready banner. Hidden by default; shown
        via titlebar.js when main.js signals an update has finished
        downloading. Never auto-restarts &mdash; user must click the button. -->
       <div id="update-banner" class="no-drag" hidden>
@@ -32,15 +31,11 @@
 
 
   <!-- The actual frndship.app content lives in this <webview>, below the
-       titlebar. main.js enforces the preload/partition for this webview via
-       'will-attach-webview' rather than trusting these markup attributes,
-       but src/preload.js is also the file used either way. -->
+       titlebar. main.js sets its URL and enforces its preload/partition via
+       'will-attach-webview' rather than trusting these markup attributes. -->
 
-  <webview id="content" src="https://frndship.app/login" partition="persist:frndship" preload="preload.js"
+  <webview id="content" src="about:blank" partition="persist:frndship"
     webpreferences="contextIsolation=yes, nodeIntegration=no" allowpopups></webview>
-
-  <!-- <webview id="content" src="http://localhost:5173/login" partition="persist:frndship"
-    webpreferences="contextIsolation=yes, nodeIntegration=no" allowpopups></webview> -->
 
   <script src="titlebar.js"></script>
 </body>

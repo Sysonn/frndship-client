@@ -7,8 +7,6 @@
   --cobalt: #3165ef;
   --safety-orange: #ff6a13;
   --grello: #c4d600;
-  /* --titlebar-bg: #0a0a0f; */
-  /* --titlebar-bg: linear-gradient(to bottom, rgba(10, 10, 15, 0.55) 0%, rgba(10, 10, 15, 0.05) 100%); */
   --titlebar-height: 32px;
 }
 
@@ -38,9 +36,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* background: var(--titlebar-bg); */
-  /* border-bottom: 1px solid rgba(245, 240, 230, 0.08); */
   user-select: none;
+}
+
+#titlebar[hidden] {
+  display: none;
 }
 
 .no-drag,
@@ -53,20 +53,6 @@ button {
   display: flex;
   align-items: center;
   height: 100%;
-}
-
-#drag-region {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  padding-left: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--cream);
-  opacity: 0.6;
 }
 
 #titlebar button {
@@ -122,18 +108,14 @@ button {
   z-index: 1;
 }
 
-/* Update-ready toast: small, non-blocking, top-right corner below the
-   titlebar. Never covers the content area's interactive controls. */
+/* Update-ready button: small and non-blocking, sits in the titlebar beside the
+   window controls. Never covers the content area's interactive controls. */
 #update-banner {
-  /* position: fixed; */
-  /* top: calc(var(--titlebar-height)); */
-  /* right: 12px; */
   margin-right: 12px;
   z-index: 10;
   display: flex;
   align-items: center;
   gap: 10px;
-  /* padding: 8px 12px; */
   border-radius: 8px;
   background: var(--cream);
   color: var(--ink);

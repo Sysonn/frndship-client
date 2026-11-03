@@ -1,13 +1,18 @@
 // Frndship Electron shell — main process
-// Sprint 1: window shell, persistent session, offline fallback, basic nav guardrails.
-// Windows-first this sprint, but nothing here is Windows-specific — platform
-// branching (macOS/Linux) can be added later without restructuring this file.
+// Window shell, persistent session, offline fallback, nav guardrails.
 
 const { app, BrowserWindow, session, shell, ipcMain, Menu, desktopCapturer } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
-const url = require('url');
 const loopback = require('loopback-capture');
+
+// Frame rate stays on Chromium's default, which follows the monitor's refresh
+// rate. disable-frame-rate-limit would uncap it entirely.
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('force_high_performance_gpu');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-oop-rasterization');
+app.commandLine.appendSwitch('use-angle', 'd3d11'); // Forces high-speed DirectX translation layer
 
 // Global tracking variable for the active audio loopback instance
 let activeAudioCapture = null;
@@ -21,16 +26,6 @@ autoUpdater.autoDownload = true;
 
 
 function initAutoUpdate() {
-  autoUpdater.checkForUpdates().catch((err) => {
-    console.error('Auto-update check failed:', err);
-  });
-
-  autoUpdater.on('update-available', (_info) => {
-    // No renderer notification needed yet for this state — the user only
-    // needs to know once the update has actually finished downloading (see
-    // 'update-downloaded' below), not that a check found one.
-  });
-
   autoUpdater.on('update-downloaded', (_info) => {
     if (mainWindow) {
       mainWindow.webContents.send('update-ready');
@@ -40,6 +35,10 @@ function initAutoUpdate() {
   autoUpdater.on('error', (err) => {
     console.error('Auto-update error:', err);
     // Fail silently — do not block or interrupt app usage.
+  });
+
+  autoUpdater.checkForUpdates().catch((err) => {
+    console.error('Auto-update check failed:', err);
   });
 }
 
@@ -53,7 +52,14 @@ ipcMain.on('restart-and-install', () => {
 Menu.setApplicationMenu(null);
 
 const APP_ORIGIN = 'https://frndship.app';
-const LOGIN_URL = `${APP_ORIGIN}/home`;
+const DEV_ORIGIN = 'http://localhost:5173';
+// Installed builds always load production. `npm start` loads the local dev
+// server, or whatever origin FRNDSHIP_URL names.
+const CONTENT_ORIGIN = app.isPackaged ? APP_ORIGIN : (process.env.FRNDSHIP_URL || DEV_ORIGIN);
+const ALLOWED_ORIGINS = new Set(
+  app.isPackaged ? [APP_ORIGIN] : [APP_ORIGIN, CONTENT_ORIGIN, DEV_ORIGIN, 'http://localhost:3000']
+);
+const LOGIN_URL = `${CONTENT_ORIGIN}/home`;
 const SESSION_PARTITION = 'persist:frndship';
 const APP_USER_MODEL_ID = 'app.frndship.desktop';
 
@@ -97,12 +103,7 @@ let isShowingOfflinePage = false;
 
 function isFrndshipUrl(targetUrl) {
   try {
-    const parsed = new URL(targetUrl);
-    return (
-      parsed.origin === APP_ORIGIN ||
-      parsed.origin === 'http://localhost:5173' ||
-      parsed.origin === 'http://localhost:3000'
-    );
+    return ALLOWED_ORIGINS.has(new URL(targetUrl).origin);
   } catch {
     return false;
   }
@@ -128,19 +129,92 @@ function sendNavState() {
   });
 }
 
-// Shared so it can be attached both to the shell window's webContents (in
-// case a shortcut is pressed while focus is on the titlebar) and to the
-// content webview's webContents (attached once it exists, see
-// did-attach-webview below).
-function registerReloadShortcut(webContents) {
+// Menu bar is hidden (see Menu.setApplicationMenu(null) above), so the default
+// accelerators no longer exist. Attached to the shell window's webContents (in
+// case a shortcut is pressed while focus is on the titlebar), the content
+// webview, and popouts. getTarget returns the webContents the shortcut acts on.
+function registerAppShortcuts(webContents, getTarget) {
   webContents.on('before-input-event', (event, input) => {
-    if (input.control && input.key.toLowerCase() === 'r' && input.type === 'keyDown') {
-      if (contentWebContents) contentWebContents.reload();
+    if (input.type !== 'keyDown') return;
+    const target = getTarget();
+    if (!target) return;
+    if (input.control && input.key.toLowerCase() === 'r') {
+      target.reload();
     }
-    if (((input.control && input.shift && input.key.toLowerCase() === 'i') || input.key === 'F12') && input.type === 'keyDown') {
-      if (contentWebContents) contentWebContents.toggleDevTools();
+    // DevTools are for local development only, not installed builds.
+    if (!app.isPackaged && ((input.control && input.shift && input.key.toLowerCase() === 'i') || input.key === 'F12')) {
+      target.toggleDevTools();
     }
   });
+}
+
+// Navigation rules shared by the content webview and any popouts it opens.
+function attachContentGuards(webContents) {
+  // Only allow same-origin navigation. Anything else (support docs, socials,
+  // OAuth provider pages, etc.) opens in the user's default browser instead.
+  webContents.on('will-navigate', (event, targetUrl) => {
+    if (webContents === contentWebContents && isShowingOfflinePage) return; // allow local file loads/retries
+    if (!isFrndshipUrl(targetUrl)) {
+      event.preventDefault();
+      shell.openExternal(targetUrl);
+    }
+  });
+
+  webContents.setWindowOpenHandler(({ url: targetUrl }) => {
+    if (isFrndshipUrl(targetUrl)) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 1400,
+          height: 900,
+          frame: false,
+          roundedCorners: true,
+          titleBarStyle: 'hidden',
+          titleBarOverlay: {
+            color: '#2a2a2a',
+            symbolColor: '#ffffff',
+            height: 32,
+          },
+          autoHideMenuBar: true,
+          backgroundColor: '#0a0a0f',
+          icon: path.join(__dirname, '..', 'build', 'icon.ico'),
+          webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: true,
+            partition: SESSION_PARTITION,
+            additionalArguments: ['--is-secondary-window=true'],
+          },
+        },
+      };
+    }
+    shell.openExternal(targetUrl);
+    return { action: 'deny' };
+  });
+
+  webContents.on('did-create-window', (childWindow) => {
+    attachContentGuards(childWindow.webContents);
+    registerAppShortcuts(childWindow.webContents, () => childWindow.webContents);
+    forwardFullscreenState(childWindow, () => [childWindow.webContents]);
+  });
+}
+
+// Tells the given webContents when a window enters or leaves fullscreen.
+function forwardFullscreenState(win, getTargets) {
+  const send = (enabled) => {
+    getTargets().forEach((target) => {
+      if (target && !target.isDestroyed()) target.send('window-fullscreen', enabled);
+    });
+  };
+  win.on('enter-full-screen', () => send(true));
+  win.on('leave-full-screen', () => send(false));
+}
+
+// The webview's webContents has no BrowserWindow of its own, so it maps to the
+// main window. Popouts own their window.
+function getWindowForContent(webContents) {
+  return webContents === contentWebContents ? mainWindow : BrowserWindow.fromWebContents(webContents);
 }
 
 function createWindow() {
@@ -190,11 +264,12 @@ function createWindow() {
   // token directly (e.g. to authorize a future native notification push),
   // that's a separate decision for a later sprint (safeStorage / keytar), not
   // handled here.
-  mainWindow.webContents.on('will-attach-webview', (_event, webPreferences) => {
+  mainWindow.webContents.on('will-attach-webview', (_event, webPreferences, params) => {
     webPreferences.preload = path.join(__dirname, 'preload.js');
     webPreferences.contextIsolation = true;
     webPreferences.nodeIntegration = false;
     webPreferences.partition = SESSION_PARTITION;
+    params.src = `${CONTENT_ORIGIN}/login`;
   });
 
   mainWindow.webContents.on('did-attach-webview', (_event, guestWebContents) => {
@@ -208,8 +283,8 @@ function createWindow() {
 
     // Intentional: Electron does NOT inspect cookies/session state or decide
     // between /login and /home here. The web app's client-side routing owns
-    // that decision entirely — the webview just loads /login (see shell.html)
-    // and lets the site redirect authenticated users on its own. Keeps auth
+    // that decision entirely — the webview just loads /login (see
+    // will-attach-webview above) and lets the site redirect authenticated users on its own. Keeps auth
     // routing in one place.
 
     contentWebContents.on('did-fail-load', (_e, errorCode, _errorDescription, _validatedURL, isMainFrame) => {
@@ -224,86 +299,36 @@ function createWindow() {
       // connectivity failures.
     });
 
-    // Navigation guardrail: only allow same-origin navigation inside the
-    // webview. Anything else (support docs, socials, OAuth provider pages,
-    // etc.) opens in the user's default browser instead.
-    contentWebContents.on('will-navigate', (event, targetUrl) => {
-      if (isShowingOfflinePage) return; // allow local file loads/retries
-      if (!isFrndshipUrl(targetUrl)) {
-        event.preventDefault();
-        shell.openExternal(targetUrl);
-      }
-    });
-
-    contentWebContents.setWindowOpenHandler(({ url: targetUrl }) => {
-      if (isFrndshipUrl(targetUrl)) {
-        return {
-          action: 'allow',
-          overrideBrowserWindowOptions: {
-            width: 1400,
-            height: 900,
-            frame: false,
-            roundedCorners: true,
-            titleBarStyle: 'hidden',
-            titleBarOverlay: {
-              color: '#2a2a2a',
-              symbolColor: '#ffffff',
-              height: 32,
-            },
-            autoHideMenuBar: true,
-            backgroundColor: '#0a0a0f',
-            icon: path.join(__dirname, '..', 'build', 'icon.ico'),
-            webPreferences: {
-              preload: path.join(__dirname, 'preload.js'),
-              contextIsolation: true,
-              nodeIntegration: false,
-              sandbox: true,
-              partition: SESSION_PARTITION,
-              additionalArguments: ['--is-secondary-window=true'],
-            },
-          },
-        };
-      }
-      shell.openExternal(targetUrl);
-      return { action: 'deny' };
-    });
+    attachContentGuards(contentWebContents);
 
     // Back/forward button disabled state at history bounds.
     contentWebContents.on('did-navigate', sendNavState);
     contentWebContents.on('did-navigate-in-page', sendNavState);
 
-    // Menu bar is hidden (see Menu.setApplicationMenu(null) above), so the
-    // default Ctrl+R reload accelerator no longer exists — re-register it
-    // manually, for input that lands inside the webview's own content.
-    registerReloadShortcut(contentWebContents);
+    registerAppShortcuts(contentWebContents, () => contentWebContents);
   });
 
   mainWindow.on('maximize', () => mainWindow.webContents.send('window-state', { maximized: true }));
   mainWindow.on('unmaximize', () => mainWindow.webContents.send('window-state', { maximized: false }));
+  forwardFullscreenState(mainWindow, () => [mainWindow.webContents, contentWebContents]);
 
   mainWindow.on('closed', () => {
     mainWindow = null;
     contentWebContents = null;
   });
 
-  // Also re-register Ctrl+R for input landing on the titlebar itself (this is
-  // the place to add other manual shortcuts later if the menu stays hidden
-  // long-term, e.g. Ctrl+Shift+I for devtools).
-  registerReloadShortcut(mainWindow.webContents);
+  // Input landing on the titlebar itself acts on the content webview.
+  registerAppShortcuts(mainWindow.webContents, () => contentWebContents);
 }
 
 function setupPermissionHandler() {
   const ses = session.fromPartition(SESSION_PARTITION);
-  // Stub permission handler: allow media (camera/mic), pointerLock (in-game
-  // cursor lock), and fullscreen for now, deny everything else by default.
-  // This is where granular per-permission gating (camera vs mic vs
-  // notifications, per-origin prompts, etc.) will live in a later sprint.
-  ses.setPermissionRequestHandler((_webContents, permission, callback) => {
-    if (permission === 'media' || permission === 'pointerLock' || permission === 'fullscreen') {
-      callback(true);
-      return;
-    }
-    callback(false);
+  // Allow media (camera/mic), pointerLock (in-game cursor lock), and fullscreen
+  // for our own pages, deny everything else. This checks the top-level page, so
+  // iframes the app embeds with an explicit allow attribute keep working.
+  ses.setPermissionRequestHandler((webContents, permission, callback) => {
+    const isAllowedPermission = permission === 'media' || permission === 'pointerLock' || permission === 'fullscreen';
+    callback(isAllowedPermission && isFrndshipUrl(webContents.getURL()));
   });
 }
 
@@ -347,9 +372,11 @@ if (!gotSingleInstanceLock) {
 // Renderer (offline.html, via preload) asks main to retry loading the live
 // site once the browser reports connectivity has returned. This is the
 // "automatic recovery" path; the offline page's Retry button also uses this
-// same channel.
+// same channel. Preload also sends this from the live site whenever the
+// connection returns, so ignore it unless the offline page is actually showing
+// — otherwise a brief network drop would pull the user out of what they're in.
 ipcMain.on('retry-connection', () => {
-  loadLoginPage();
+  if (isShowingOfflinePage) loadLoginPage();
 });
 
 // Titlebar window controls (see shell-preload.js / titlebar.js).
@@ -366,6 +393,17 @@ ipcMain.on('window-maximize', () => {
 });
 ipcMain.on('window-close', () => {
   if (mainWindow) mainWindow.close();
+});
+
+// Native window fullscreen for the web app. Unlike HTML fullscreen, a tap of
+// Esc doesn't exit it, so Esc only frees the cursor while in a world.
+ipcMain.on('set-window-fullscreen', (event, enabled) => {
+  const win = getWindowForContent(event.sender);
+  if (win) win.setFullScreen(!!enabled);
+});
+ipcMain.handle('is-window-fullscreen', (event) => {
+  const win = getWindowForContent(event.sender);
+  return !!win && win.isFullScreen();
 });
 
 // Titlebar nav controls target the content <webview>'s webContents, not the
@@ -465,4 +503,5 @@ ipcMain.handle('get-desktop-sources', async () => {
     thumbnail: source.thumbnail.toDataURL()
   }));
 });
+
 
