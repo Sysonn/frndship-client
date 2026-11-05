@@ -1,7 +1,7 @@
 // Frndship Electron shell — main process
 // Window shell, persistent session, offline fallback, nav guardrails.
 
-const { app, BrowserWindow, session, shell, ipcMain, Menu, desktopCapturer } = require('electron');
+const { app, BrowserWindow, session, shell, ipcMain, Menu, desktopCapturer, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const loopback = require('loopback-capture');
@@ -60,6 +60,8 @@ const ALLOWED_ORIGINS = new Set(
   app.isPackaged ? [APP_ORIGIN] : [APP_ORIGIN, CONTENT_ORIGIN, DEV_ORIGIN, 'http://localhost:3000']
 );
 const LOGIN_URL = `${CONTENT_ORIGIN}/home`;
+const CRASH_WINDOW_MS = 60 * 1000;
+const MAX_CRASHES_IN_WINDOW = 3;
 const SESSION_PARTITION = 'persist:frndship';
 const APP_USER_MODEL_ID = 'app.frndship.desktop';
 
@@ -197,6 +199,38 @@ function attachContentGuards(webContents) {
     attachContentGuards(childWindow.webContents);
     registerAppShortcuts(childWindow.webContents, () => childWindow.webContents);
     forwardFullscreenState(childWindow, () => [childWindow.webContents]);
+    attachCrashRecovery(childWindow.webContents);
+  });
+}
+
+// Reloads a crashed page back to where it was. A page that keeps crashing asks
+// the user instead, so it can't get stuck in a reload loop.
+function attachCrashRecovery(webContents) {
+  let recentCrashes = [];
+  webContents.on('render-process-gone', async (_event, details) => {
+    console.error('Renderer process gone:', details.reason);
+    if (details.reason === 'clean-exit' || webContents.isDestroyed()) return;
+
+    const now = Date.now();
+    recentCrashes = recentCrashes.filter((time) => now - time < CRASH_WINDOW_MS);
+    recentCrashes.push(now);
+    if (recentCrashes.length >= MAX_CRASHES_IN_WINDOW) {
+      const { response } = await dialog.showMessageBox({
+        type: 'error',
+        title: 'Frndship',
+        message: 'Frndship keeps crashing',
+        detail: 'Reload to try again, or quit and restart the app.',
+        buttons: ['Reload', 'Quit'],
+        defaultId: 0,
+        cancelId: 1,
+      });
+      if (response === 1) {
+        app.quit();
+        return;
+      }
+      recentCrashes = [];
+    }
+    if (!webContents.isDestroyed()) webContents.reload();
   });
 }
 
@@ -269,6 +303,9 @@ function createWindow() {
     webPreferences.contextIsolation = true;
     webPreferences.nodeIntegration = false;
     webPreferences.partition = SESSION_PARTITION;
+    // Keep the game connected while alt-tabbed. The web app lowers its own frame
+    // rate when the window isn't focused.
+    webPreferences.backgroundThrottling = false;
     params.src = `${CONTENT_ORIGIN}/login`;
   });
 
@@ -306,6 +343,7 @@ function createWindow() {
     contentWebContents.on('did-navigate-in-page', sendNavState);
 
     registerAppShortcuts(contentWebContents, () => contentWebContents);
+    attachCrashRecovery(contentWebContents);
   });
 
   mainWindow.on('maximize', () => mainWindow.webContents.send('window-state', { maximized: true }));
@@ -319,6 +357,7 @@ function createWindow() {
 
   // Input landing on the titlebar itself acts on the content webview.
   registerAppShortcuts(mainWindow.webContents, () => contentWebContents);
+  attachCrashRecovery(mainWindow.webContents);
 }
 
 function setupPermissionHandler() {

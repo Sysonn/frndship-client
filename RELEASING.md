@@ -22,6 +22,7 @@ Releases go to GitHub Releases on `Sysonn/frndship-client`. Installed clients up
 
 ## Local development
 
+- A fresh `npm install` needs Node 22.12 or newer, because Electron downloads its binary with it.
 - `npm start` loads the local dev server at `http://localhost:5173`.
 - `$env:FRNDSHIP_URL = "https://frndship.app"; npm start` runs your local client code against production. Run `Remove-Item Env:FRNDSHIP_URL` to go back to the dev server.
 - Installed builds always load production and ignore `FRNDSHIP_URL`.
