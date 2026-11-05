@@ -2,6 +2,7 @@
 const statusEl = document.getElementById('status');
 
 document.getElementById('retry-btn').addEventListener('click', () => {
+  statusEl.textContent = 'Trying to reconnect…';
   window.frndship.retryConnection();
 });
 
@@ -11,5 +12,5 @@ window.addEventListener('online', () => {
   statusEl.textContent = 'Connection detected, reconnecting…';
 });
 window.addEventListener('offline', () => {
-  statusEl.textContent = '';
+  statusEl.textContent = 'Waiting for connection';
 });
