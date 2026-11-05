@@ -16,7 +16,26 @@ contextBridge.exposeInMainWorld('frndship', {
   retryConnection: () => ipcRenderer.send('retry-connection'),
 });
 
+// frndship:// links handed over by main. One can arrive before the web app is
+// ready to handle it (e.g. still signing in), so the latest is held until then.
+let pendingLink = null;
+let linkListener = null;
+ipcRenderer.on('open-link', (_event, linkPath) => {
+  if (linkListener) linkListener(linkPath);
+  else pendingLink = linkPath;
+});
+
 contextBridge.exposeInMainWorld('electron', {
+  onOpenLink: (callback) => {
+    linkListener = callback;
+    if (pendingLink) {
+      callback(pendingLink);
+      pendingLink = null;
+    }
+    return () => {
+      if (linkListener === callback) linkListener = null;
+    };
+  },
   getDesktopSources: () => ipcRenderer.invoke('get-desktop-sources'),
   isDesktopApp: true,
   setWindowFullscreen: (enabled) => ipcRenderer.send('set-window-fullscreen', enabled),

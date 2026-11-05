@@ -19,6 +19,12 @@
   "build": {
     "appId": "app.frndship.desktop",
     "productName": "Frndship",
+    "protocols": [
+      {
+        "name": "Frndship",
+        "schemes": ["frndship"]
+      }
+    ],
     "directories": {
       "output": "dist",
       "buildResources": "build"

@@ -62,6 +62,42 @@ const ALLOWED_ORIGINS = new Set(
 const LOGIN_URL = `${CONTENT_ORIGIN}/home`;
 const CRASH_WINDOW_MS = 60 * 1000;
 const MAX_CRASHES_IN_WINDOW = 3;
+
+// frndship:// links come from the website's join page. Only world and station
+// links are accepted, e.g. frndship://world/<id>/<channel>?invite=<token>.
+const PROTOCOL = 'frndship';
+const LINK_PATH = /^\/(world|station)\/[A-Za-z0-9_-]{1,64}(\/\d{1,6})?$/;
+const INVITE_TOKEN = /^[A-Za-z0-9]{1,64}$/;
+
+/** Turns a frndship:// link into a site path, or null if it isn't one we accept. */
+function frndshipLinkToPath(rawUrl) {
+  try {
+    const link = new URL(rawUrl);
+    if (link.protocol !== `${PROTOCOL}:`) return null;
+    const path = `/${link.hostname}${link.pathname}`.replace(/\/+$/, '');
+    if (!LINK_PATH.test(path)) return null;
+    const invite = link.searchParams.get('invite');
+    return invite && INVITE_TOKEN.test(invite) ? `${path}?invite=${invite}` : path;
+  } catch {
+    return null;
+  }
+}
+
+const findLinkPath = (argv) => {
+  const linkArg = argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
+  return linkArg ? frndshipLinkToPath(linkArg) : null;
+};
+
+// A link that started the app opens in place of the usual login page
+const launchLinkPath = findLinkPath(process.argv);
+
+// Installed builds register frndship:// through the installer. `npm start`
+// leaves the installed app as the handler unless asked to take it over.
+if (app.isPackaged) {
+  app.setAsDefaultProtocolClient(PROTOCOL);
+} else if (process.env.FRNDSHIP_REGISTER_PROTOCOL) {
+  app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+}
 const SESSION_PARTITION = 'persist:frndship';
 const APP_USER_MODEL_ID = 'app.frndship.desktop';
 
@@ -306,7 +342,7 @@ function createWindow() {
     // Keep the game connected while alt-tabbed. The web app lowers its own frame
     // rate when the window isn't focused.
     webPreferences.backgroundThrottling = false;
-    params.src = `${CONTENT_ORIGIN}/login`;
+    params.src = `${CONTENT_ORIGIN}${launchLinkPath ?? '/login'}`;
   });
 
   mainWindow.webContents.on('did-attach-webview', (_event, guestWebContents) => {
@@ -377,10 +413,15 @@ const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
+    }
+    // A frndship:// link opened while the app was running: the web app opens it in place
+    const linkPath = findLinkPath(argv);
+    if (linkPath && contentWebContents && !contentWebContents.isDestroyed()) {
+      contentWebContents.send('open-link', linkPath);
     }
   });
 
