@@ -1,6 +1,6 @@
 {
   "name": "frndship-electron",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Frndship Electron desktop shell",
   "main": "src/main.js",
   "scripts": {
@@ -13,7 +13,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^45.2.3",
+    "electron": "44.10.2",
     "electron-builder": "^24.13.3"
   },
   "build": {
@@ -22,7 +22,9 @@
     "protocols": [
       {
         "name": "Frndship",
-        "schemes": ["frndship"]
+        "schemes": [
+          "frndship"
+        ]
       }
     ],
     "directories": {

@@ -398,8 +398,8 @@ function createWindow() {
 
 function setupPermissionHandler() {
   const ses = session.fromPartition(SESSION_PARTITION);
-  // Allow media (camera/mic), display-capture (screen share, which Electron asks
-  // about separately since 45), pointerLock (in-game cursor lock), fullscreen,
+  // Allow media (camera/mic), display-capture (screen share, which newer
+  // Electron versions ask about separately), pointerLock (in-game cursor lock), fullscreen,
   // and clipboard access (share links, copying and pasting in Networks) for our
   // own pages, deny everything else. This checks the top-level page, so iframes
   // the app embeds with an explicit allow attribute keep working.
