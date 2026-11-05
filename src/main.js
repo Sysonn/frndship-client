@@ -362,12 +362,13 @@ function createWindow() {
 
 function setupPermissionHandler() {
   const ses = session.fromPartition(SESSION_PARTITION);
-  // Allow media (camera/mic), pointerLock (in-game cursor lock), and fullscreen
-  // for our own pages, deny everything else. This checks the top-level page, so
-  // iframes the app embeds with an explicit allow attribute keep working.
+  // Allow media (camera/mic), pointerLock (in-game cursor lock), fullscreen, and
+  // clipboard access (share links, copying and pasting in Networks) for our own
+  // pages, deny everything else. This checks the top-level page, so iframes the
+  // app embeds with an explicit allow attribute keep working.
+  const ALLOWED_PERMISSIONS = new Set(['media', 'pointerLock', 'fullscreen', 'clipboard-sanitized-write', 'clipboard-read']);
   ses.setPermissionRequestHandler((webContents, permission, callback) => {
-    const isAllowedPermission = permission === 'media' || permission === 'pointerLock' || permission === 'fullscreen';
-    callback(isAllowedPermission && isFrndshipUrl(webContents.getURL()));
+    callback(ALLOWED_PERMISSIONS.has(permission) && isFrndshipUrl(webContents.getURL()));
   });
 }
 
